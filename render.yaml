@@ -77,7 +77,6 @@ services:
   - type: web
     name: foodieexpress-web
     runtime: static
-    region: singapore
     rootDir: client
     buildCommand: npm install && npm run build
     staticPublishPath: dist
