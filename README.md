@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # FoodieExpress
 
 A full-stack, multi-role food-delivery web application built on the **MERN stack** with **TypeScript**.
@@ -272,3 +273,6 @@ Suite covers: register + OTP verify, login (rejects unverified, lockout after 5 
 ## License
 
 Academic project. Educational use only.
+=======
+# foodieexpress-fullstack
+>>>>>>> ba284283b5f5e39dfcbcb2728759dc992bcfad8a
