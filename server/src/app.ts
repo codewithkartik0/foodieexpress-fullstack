@@ -36,6 +36,12 @@ export function createApp(): express.Express {
         // Same-origin / curl / health checks
         if (!origin) return cb(null, true);
         if (config.clientOrigins.includes(origin)) return cb(null, true);
+        // In production, auto-allow any *.onrender.com subdomain so the frontend
+        // service can talk to the API service without us having to wire up the
+        // exact URL via env var. Local dev still uses the explicit CLIENT_ORIGIN.
+        if (config.isProd && /^https:\/\/[a-z0-9-]+\.onrender\.com$/i.test(origin)) {
+          return cb(null, true);
+        }
         return cb(new Error(`CORS: origin ${origin} not allowed`));
       },
       credentials: true,
