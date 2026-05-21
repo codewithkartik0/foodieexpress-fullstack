@@ -1,0 +1,94 @@
+# Render blueprint - https://render.com/docs/blueprint-spec
+#
+# Deploys two services from this monorepo:
+#   1. foodieexpress-api    (Node.js Web Service – the backend)
+#   2. foodieexpress-web    (Static Site – the React/Vite frontend)
+#
+# To use:
+#   1. Push the repo to any Git hosting service Render supports.
+#   2. In Render, click "New +" -> "Blueprint" -> connect your repo.
+#   3. Render reads this file and proposes both services.
+#   4. Set the env vars marked `sync: false` (secrets) before clicking Apply.
+#   5. After both services first deploy, fill in CLIENT_ORIGIN + APP_URL on the
+#      backend (= frontend URL) and VITE_API_BASE_URL on the frontend
+#      (= backend URL + /api/v1) and let them redeploy.
+
+services:
+  # ----------- Backend API -----------
+  - type: web
+    name: foodieexpress-api
+    runtime: node
+    plan: free                 # change to "starter" ($7/mo) to keep it always-on
+    region: singapore          # closest Render region to India; pick another if you prefer
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: node dist/server.js
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false            # paste your Atlas URI here in Render UI
+      - key: JWT_ACCESS_SECRET
+        generateValue: true    # Render auto-generates a strong secret
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: JWT_ACCESS_TTL
+        value: 30m
+      - key: JWT_REFRESH_TTL
+        value: 14d
+      - key: BCRYPT_COST
+        value: "12"
+      - key: CLIENT_ORIGIN
+        sync: false            # set to your frontend URL after first deploy, e.g. https://foodieexpress-web.onrender.com
+      - key: STRIPE_SECRET_KEY
+        sync: false            # leave blank for dev-mock checkout, or paste sk_test_/sk_live_
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_CURRENCY
+        value: inr
+      - key: SMTP_HOST
+        sync: false            # e.g. smtp.gmail.com (or leave blank to log emails to stdout)
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: EMAIL_FROM
+        value: FoodieExpress <no-reply@foodieexpress.dev>
+      - key: APP_URL
+        sync: false            # set to your frontend URL after first deploy, used in password-reset emails
+      - key: TAX_RATE
+        value: "0.05"
+      - key: DELIVERY_FEE
+        value: "49"
+      - key: RATE_LIMIT_WINDOW_MS
+        value: "60000"
+      - key: RATE_LIMIT_MAX
+        value: "120"
+
+  # ----------- Frontend (static site) -----------
+  - type: web
+    name: foodieexpress-web
+    runtime: static
+    region: singapore
+    rootDir: client
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    autoDeploy: true
+    # SPA routing – serve index.html for unknown paths so React Router works
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false            # set to your API URL after first deploy, e.g. https://foodieexpress-api.onrender.com/api/v1
+      - key: VITE_STRIPE_PUBLISHABLE_KEY
+        sync: false            # pk_test_... or pk_live_... ; leave blank for dev mock
