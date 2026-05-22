@@ -66,6 +66,10 @@ export const config = {
     apiKey: optional('RESEND_API_KEY'),
   },
 
+  brevo: {
+    apiKey: optional('BREVO_API_KEY'),
+  },
+
   appUrl: optional('APP_URL', 'http://localhost:5173'),
 
   pricing: {

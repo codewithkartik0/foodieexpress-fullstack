@@ -50,10 +50,12 @@ services:
         sync: false
       - key: STRIPE_CURRENCY
         value: inr
+      - key: BREVO_API_KEY
+        sync: false            # paste your Brevo API key (https://brevo.com) here in Render UI
       - key: RESEND_API_KEY
-        sync: false            # paste your Resend API key (https://resend.com) here in Render UI
+        sync: false            # optional fallback; only useful if you verify a domain on Resend
       - key: SMTP_HOST
-        sync: false            # legacy SMTP fallback; Render blocks outbound SMTP, prefer Resend
+        sync: false            # legacy SMTP fallback; Render blocks outbound SMTP, prefer Brevo
       - key: SMTP_PORT
         value: "587"
       - key: SMTP_SECURE
@@ -63,7 +65,7 @@ services:
       - key: SMTP_PASS
         sync: false
       - key: EMAIL_FROM
-        value: FoodieExpress <onboarding@resend.dev>
+        sync: false            # must match the email you verified at your provider
       - key: APP_URL
         sync: false            # set to your frontend URL after first deploy, used in password-reset emails
       - key: TAX_RATE

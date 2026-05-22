@@ -13,12 +13,99 @@ export interface EmailMessage {
 let transporter: Transporter | null = null;
 let resendClient: Resend | null = null;
 
+/**
+ * Parse an RFC 5322-style "Name <email@host>" string into its parts.
+ * Falls back to using the raw value as the email and a generic name.
+ */
+function parseFrom(raw: string): { name: string; email: string } {
+  const m = raw.match(/^\s*"?(.*?)"?\s*<\s*(\S+@\S+?)\s*>\s*$/);
+  if (m) {
+    return { name: m[1].trim() || 'FoodieExpress', email: m[2].trim() };
+  }
+  return { name: 'FoodieExpress', email: raw.trim() };
+}
+
+// --- Brevo (HTTP API, https://api.brevo.com) ----------------------------
+//
+// Works with a single-sender-verified email -- no domain ownership needed.
+// Free tier: 300 emails/day, no card required.
+
+async function sendViaBrevo(msg: EmailMessage): Promise<boolean> {
+  if (!config.brevo.apiKey) return false;
+  const sender = parseFrom(config.smtp.from);
+  try {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'api-key': config.brevo.apiKey,
+        'Content-Type': 'application/json',
+        accept: 'application/json',
+      },
+      body: JSON.stringify({
+        sender,
+        to: [{ email: msg.to }],
+        subject: msg.subject,
+        htmlContent: msg.html,
+        textContent: msg.text,
+      }),
+    });
+    if (!res.ok) {
+      const errBody = await res.text();
+      logger.error(`Brevo send failed: HTTP ${res.status} ${errBody}`);
+      // Returning true here means "we attempted via Brevo, do not fall through
+      // to the next backend" -- we don't want a misconfigured Brevo key to
+      // silently start using SMTP / stdout.
+      return true;
+    }
+    const data = (await res.json()) as { messageId?: string };
+    logger.info(`Email sent via Brevo: ${data.messageId ?? 'no-id'} -> ${msg.to}`);
+    return true;
+  } catch (err) {
+    logger.error('Brevo send threw', err as Error);
+    return true;
+  }
+}
+
+// --- Resend (HTTP API) --------------------------------------------------
+//
+// Requires verified domain to send to arbitrary recipients (otherwise capped
+// to the account-owner email). Kept as a backup option for projects that own
+// a domain.
+
 function getResend(): Resend | null {
   if (resendClient) return resendClient;
   if (!config.resend.apiKey) return null;
   resendClient = new Resend(config.resend.apiKey);
   return resendClient;
 }
+
+async function sendViaResend(msg: EmailMessage): Promise<boolean> {
+  const resend = getResend();
+  if (!resend) return false;
+  try {
+    const result = await resend.emails.send({
+      from: config.smtp.from,
+      to: [msg.to],
+      subject: msg.subject,
+      html: msg.html,
+      text: msg.text,
+    });
+    if (result.error) {
+      logger.error('Resend send failed', result.error as unknown as Error);
+      return true;
+    }
+    logger.info(`Email sent via Resend: ${result.data?.id ?? 'no-id'} -> ${msg.to}`);
+    return true;
+  } catch (err) {
+    logger.error('Resend send threw', err as Error);
+    return true;
+  }
+}
+
+// --- SMTP via nodemailer ------------------------------------------------
+//
+// Works for local dev / non-Render hosts. Render blocks outbound SMTP, so on
+// Render this path is effectively dead.
 
 function getTransporter(): Transporter | null {
   if (transporter) return transporter;
@@ -32,61 +119,40 @@ function getTransporter(): Transporter | null {
   return transporter;
 }
 
+async function sendViaSmtp(msg: EmailMessage): Promise<boolean> {
+  const t = getTransporter();
+  if (!t) return false;
+  try {
+    const info = await t.sendMail({
+      from: config.smtp.from,
+      to: msg.to,
+      subject: msg.subject,
+      html: msg.html,
+      text: msg.text,
+    });
+    logger.info(`Email sent via SMTP: ${info.messageId} -> ${msg.to}`);
+    return true;
+  } catch (err) {
+    logger.error('SMTP send failed', err as Error);
+    return true;
+  }
+}
+
 /**
- * Send an email using one of the configured backends, in priority order:
+ * Send an email using the first configured backend, in priority order:
  *
- *   1. Resend HTTP API (RESEND_API_KEY)            -- works on Render
- *   2. SMTP via nodemailer (SMTP_HOST + creds)     -- works locally / non-Render
- *   3. stdout fallback                              -- dev convenience
+ *   1. Brevo HTTP API (BREVO_API_KEY)         -- works on Render, no domain needed
+ *   2. Resend HTTP API (RESEND_API_KEY)       -- works on Render, requires verified domain
+ *   3. SMTP via nodemailer (SMTP_HOST + creds) -- local dev / non-Render hosts
+ *   4. stdout fallback                         -- dev convenience
  *
- * Failures are logged but never thrown -- callers should not block user-facing
+ * Failures are logged but never thrown -- callers must not block user-facing
  * flows on email delivery.
  */
 export async function sendEmail(msg: EmailMessage): Promise<void> {
-  // 1. Resend (HTTP API) -- preferred because it works in environments that
-  //    block outbound SMTP (e.g. Render, Railway free/hobby).
-  const resend = getResend();
-  if (resend) {
-    try {
-      const result = await resend.emails.send({
-        from: config.smtp.from,
-        to: [msg.to],
-        subject: msg.subject,
-        html: msg.html,
-        text: msg.text,
-      });
-      if (result.error) {
-        logger.error('Resend send failed', result.error as unknown as Error);
-        return;
-      }
-      logger.info(`Email sent via Resend: ${result.data?.id ?? 'no-id'} -> ${msg.to}`);
-      return;
-    } catch (err) {
-      logger.error('Resend send threw', err as Error);
-      return;
-    }
-  }
-
-  // 2. SMTP via nodemailer
-  const t = getTransporter();
-  if (t) {
-    try {
-      const info = await t.sendMail({
-        from: config.smtp.from,
-        to: msg.to,
-        subject: msg.subject,
-        html: msg.html,
-        text: msg.text,
-      });
-      logger.info(`Email sent via SMTP: ${info.messageId} -> ${msg.to}`);
-      return;
-    } catch (err) {
-      logger.error('SMTP send failed', err as Error);
-      return;
-    }
-  }
-
-  // 3. Stdout fallback (dev convenience -- prints OTP / link to logs)
+  if (await sendViaBrevo(msg)) return;
+  if (await sendViaResend(msg)) return;
+  if (await sendViaSmtp(msg)) return;
   logger.info('[email:stdout]', { to: msg.to, subject: msg.subject, text: msg.text });
 }
 
