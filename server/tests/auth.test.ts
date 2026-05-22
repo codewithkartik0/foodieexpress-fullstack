@@ -106,13 +106,15 @@ describe('POST /api/v1/auth/verify-email', () => {
 });
 
 describe('POST /api/v1/auth/login', () => {
-  it('rejects login when email is not yet verified', async () => {
+  it('allows login even when the email is not yet verified (OTP is signup-only)', async () => {
     await request(app).post('/api/v1/auth/register').send(validUser);
     const res = await request(app)
       .post('/api/v1/auth/login')
       .send({ email: validUser.email, password: validUser.password });
-    expect(res.status).toBe(403);
-    expect(res.body.error.code).toBe('EMAIL_NOT_VERIFIED');
+    expect(res.status).toBe(200);
+    expect(res.body.data.accessToken).toBeDefined();
+    // The user is not yet verified, but is still allowed to sign in.
+    expect(res.body.data.user.emailVerified).toBe(false);
   });
 
   it('returns tokens for valid credentials when verified', async () => {

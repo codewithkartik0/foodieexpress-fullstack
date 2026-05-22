@@ -287,20 +287,6 @@ export async function login(args: {
     throw AppError.unauthorized('Invalid credentials', 'INVALID_CREDENTIALS');
   }
 
-  if (!user.emailVerified) {
-    await audit({
-      type: 'auth.login.failure',
-      userId: user.id,
-      req,
-      outcome: 'failure',
-      meta: { reason: 'email_not_verified' },
-    });
-    throw AppError.forbidden(
-      'Please verify your email address to continue',
-      'EMAIL_NOT_VERIFIED',
-    );
-  }
-
   user.failedLoginAttempts = 0;
   user.lockUntil = null;
   if (user.status === 'locked') user.status = 'active';
