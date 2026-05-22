@@ -11,7 +11,9 @@ export function getStripe(): Stripe | null {
   if (client) return client;
   if (!config.stripe.secretKey || config.stripe.secretKey.includes('replace_me')) return null;
   client = new Stripe(config.stripe.secretKey, {
-    apiVersion: '2024-06-20' as Stripe.LatestApiVersion,
+    // Omit apiVersion: the installed stripe SDK pins it internally based on
+    // package version. This avoids drift between the literal string and the
+    // SDK's Stripe.LatestApiVersion type when the package is upgraded.
     typescript: true,
   });
   return client;

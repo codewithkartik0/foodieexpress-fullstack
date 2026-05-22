@@ -1,4 +1,5 @@
 import { customAlphabet } from 'nanoid';
+import { Types } from 'mongoose';
 import { Cart } from '../../models/Cart';
 import { Order, OrderDoc, OrderStatus, ALLOWED_TRANSITIONS, PaymentMethod } from '../../models/Order';
 import { Restaurant } from '../../models/Restaurant';
@@ -72,9 +73,9 @@ export async function placeOrder(args: PlaceOrderArgs): Promise<OrderDoc> {
     deliveryFee: pricing.deliveryFee,
     total: pricing.total,
     paymentMethod: args.paymentMethod,
-    paymentStatus: args.paymentMethod === 'cod' ? 'pending' : 'pending',
+    paymentStatus: 'pending',
     status: 'placed',
-    statusHistory: [{ status: 'placed', at: new Date(), by: args.userId as unknown as undefined }],
+    statusHistory: [{ status: 'placed', at: new Date(), by: new Types.ObjectId(args.userId) }],
     deliveryAddress: { ...args.deliveryAddress, country: args.deliveryAddress.country ?? 'IN' },
     notes: args.notes,
   });
@@ -194,7 +195,7 @@ export async function updateStatus(args: {
   order.statusHistory.push({
     status: args.next,
     at: new Date(),
-    by: args.ownerId as unknown as undefined,
+    by: new Types.ObjectId(args.ownerId),
     note: args.note,
   });
 
@@ -245,7 +246,7 @@ export async function cancelByCustomer(args: {
   order.statusHistory.push({
     status: 'cancelled',
     at: new Date(),
-    by: args.userId as unknown as undefined,
+    by: new Types.ObjectId(args.userId),
     note: args.reason,
   });
   if (order.paymentStatus === 'paid') {
