@@ -1,4 +1,5 @@
 import nodemailer, { Transporter } from 'nodemailer';
+import { Resend } from 'resend';
 import { config } from '../config';
 import { logger } from '../config/logger';
 
@@ -10,6 +11,14 @@ export interface EmailMessage {
 }
 
 let transporter: Transporter | null = null;
+let resendClient: Resend | null = null;
+
+function getResend(): Resend | null {
+  if (resendClient) return resendClient;
+  if (!config.resend.apiKey) return null;
+  resendClient = new Resend(config.resend.apiKey);
+  return resendClient;
+}
 
 function getTransporter(): Transporter | null {
   if (transporter) return transporter;
@@ -24,27 +33,61 @@ function getTransporter(): Transporter | null {
 }
 
 /**
- * Send an email via SMTP, or log to stdout when SMTP is not configured (dev convenience).
- * Failures are logged but do not throw — callers should not block user-facing flows on email.
+ * Send an email using one of the configured backends, in priority order:
+ *
+ *   1. Resend HTTP API (RESEND_API_KEY)            -- works on Render
+ *   2. SMTP via nodemailer (SMTP_HOST + creds)     -- works locally / non-Render
+ *   3. stdout fallback                              -- dev convenience
+ *
+ * Failures are logged but never thrown -- callers should not block user-facing
+ * flows on email delivery.
  */
 export async function sendEmail(msg: EmailMessage): Promise<void> {
+  // 1. Resend (HTTP API) -- preferred because it works in environments that
+  //    block outbound SMTP (e.g. Render, Railway free/hobby).
+  const resend = getResend();
+  if (resend) {
+    try {
+      const result = await resend.emails.send({
+        from: config.smtp.from,
+        to: [msg.to],
+        subject: msg.subject,
+        html: msg.html,
+        text: msg.text,
+      });
+      if (result.error) {
+        logger.error('Resend send failed', result.error as unknown as Error);
+        return;
+      }
+      logger.info(`Email sent via Resend: ${result.data?.id ?? 'no-id'} -> ${msg.to}`);
+      return;
+    } catch (err) {
+      logger.error('Resend send threw', err as Error);
+      return;
+    }
+  }
+
+  // 2. SMTP via nodemailer
   const t = getTransporter();
-  if (!t) {
-    logger.info('[email:stdout]', { to: msg.to, subject: msg.subject, text: msg.text });
-    return;
+  if (t) {
+    try {
+      const info = await t.sendMail({
+        from: config.smtp.from,
+        to: msg.to,
+        subject: msg.subject,
+        html: msg.html,
+        text: msg.text,
+      });
+      logger.info(`Email sent via SMTP: ${info.messageId} -> ${msg.to}`);
+      return;
+    } catch (err) {
+      logger.error('SMTP send failed', err as Error);
+      return;
+    }
   }
-  try {
-    const info = await t.sendMail({
-      from: config.smtp.from,
-      to: msg.to,
-      subject: msg.subject,
-      html: msg.html,
-      text: msg.text,
-    });
-    logger.info(`Email sent: ${info.messageId} -> ${msg.to}`);
-  } catch (err) {
-    logger.error('Email send failed', err as Error);
-  }
+
+  // 3. Stdout fallback (dev convenience -- prints OTP / link to logs)
+  logger.info('[email:stdout]', { to: msg.to, subject: msg.subject, text: msg.text });
 }
 
 // Email body templates ------------------------------------------------------
