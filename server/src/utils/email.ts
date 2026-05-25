@@ -11,6 +11,28 @@ export interface EmailMessage {
 
 let transporter: Transporter | null = null;
 
+// --- Brevo (HTTP API) --------------------------------------------------
+
+async function sendViaBrevo(msg: EmailMessage): Promise<boolean> {
+  if (!config.brevo.apiKey) return false;
+  const m = config.smtp.from.match(/^\s*"?(.*?)"?\s*<\s*(\S+@\S+?)\s*>\s*$/);
+  const sender = m ? { name: m[1].trim() || 'FoodieExpress', email: m[2].trim() } : { name: 'FoodieExpress', email: config.smtp.from.trim() };
+  try {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'api-key': config.brevo.apiKey, 'Content-Type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ sender, to: [{ email: msg.to }], subject: msg.subject, htmlContent: msg.html, textContent: msg.text }),
+    });
+    if (!res.ok) { logger.error(`Brevo send failed: HTTP ${res.status}`); return true; }
+    const data = (await res.json()) as { messageId?: string };
+    logger.info(`Email sent via Brevo: ${data.messageId ?? 'no-id'} -> ${msg.to}`);
+    return true;
+  } catch (err) {
+    logger.error('Brevo send threw', err as Error);
+    return true;
+  }
+}
+
 // --- SMTP via nodemailer ------------------------------------------------
 
 function getTransporter(): Transporter | null {
@@ -45,6 +67,7 @@ async function sendViaSmtp(msg: EmailMessage): Promise<boolean> {
 }
 
 export async function sendEmail(msg: EmailMessage): Promise<void> {
+  if (await sendViaBrevo(msg)) return;
   if (await sendViaSmtp(msg)) return;
   logger.info('[email:stdout]', { to: msg.to, subject: msg.subject, text: msg.text });
 }

@@ -58,6 +58,10 @@ export const config = {
     currency: optional('STRIPE_CURRENCY', 'inr'),
   },
 
+  brevo: {
+    apiKey: optional('BREVO_API_KEY'),
+  },
+
   smtp: {
     host: optional('SMTP_HOST'),
     port: num('SMTP_PORT', 587),
