@@ -29,16 +29,6 @@ export default function LoginPage() {
       const dest = from && from !== '/login' ? from : roleHome(user.role);
       navigate(dest, { replace: true });
     } catch (e) {
-      // Special-case: account exists but the email hasn't been verified yet.
-      const code =
-        axios.isAxiosError(e) && (e.response?.data as { error?: { code?: string } } | undefined)?.error?.code;
-      if (code === 'EMAIL_NOT_VERIFIED') {
-        toast('Please verify your email to continue', { icon: '✉️' });
-        navigate(`/verify-email?email=${encodeURIComponent(values.email.toLowerCase())}`, {
-          state: { email: values.email.toLowerCase() },
-        });
-        return;
-      }
       toast.error(asMessage(e, 'Invalid credentials'));
     } finally {
       setSubmitting(false);
