@@ -429,6 +429,6 @@ export async function updateProfile(args: {
   if (args.addresses !== undefined) user.addresses = args.addresses as any;
 
   await user.save();
-  await audit({ type: 'user.profile.update', userId: user.id, role: user.role, req: args.req });
+  await audit({ type: 'admin.action', userId: user.id, role: user.role, req: args.req, meta: { action: 'profile.update' } });
   return user.toJSON();
 }
