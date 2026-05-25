@@ -23,14 +23,3 @@ export function requireAuth(req: Request, _res: Response, next: NextFunction): v
     return next(err);
   }
 }
-
-/** Optional version - if a token is present, attaches req.user; otherwise continues. */
-export function optionalAuth(req: Request, _res: Response, next: NextFunction): void {
-  const header = req.header('authorization') ?? req.header('Authorization');
-  if (!header) return next();
-  try {
-    requireAuth(req, _res, next);
-  } catch {
-    return next();
-  }
-}

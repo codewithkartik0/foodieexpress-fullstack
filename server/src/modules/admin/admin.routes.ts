@@ -75,7 +75,7 @@ const setApproval = asyncHandler(async (req: Request, res: Response) => {
   await restaurant.save();
 
   await audit({
-    type: action === 'approve' ? 'restaurant.approve' : 'restaurant.suspend',
+    type: action === 'suspend' ? 'restaurant.suspend' : 'restaurant.approve',
     userId: req.user!.id,
     role: 'admin',
     req,

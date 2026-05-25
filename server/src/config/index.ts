@@ -1,7 +1,12 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+// In test mode, skip loading .env so real secrets (e.g. STRIPE_SECRET_KEY,
+// MONGODB_URI for an Atlas cluster) don't leak into the in-memory test setup.
+// Tests rely on the safe defaults below, plus any vars they set explicitly.
+if (process.env.NODE_ENV !== 'test') {
+  dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+}
 
 function required(name: string, fallback?: string): string {
   const value = process.env[name] ?? fallback;

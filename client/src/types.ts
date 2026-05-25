@@ -178,17 +178,6 @@ export interface AuditLogEntry {
   createdAt: string;
 }
 
-export interface NotificationItem {
-  _id: string;
-  userId: string;
-  type: string;
-  title: string;
-  body?: string;
-  link?: string;
-  read: boolean;
-  createdAt: string;
-}
-
 export interface PageMeta {
   page: number;
   perPage: number;

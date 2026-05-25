@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from 'express';
-import Joi, { ObjectSchema } from 'joi';
+import { ObjectSchema } from 'joi';
 import { AppError } from '../utils/AppError';
 
 interface ValidatorMap {
@@ -37,15 +37,3 @@ export function validate(schemas: ValidatorMap) {
     return next();
   };
 }
-
-// Frequently used reusable schemas ----------------------------------------
-
-export const objectIdSchema = Joi.string()
-  .regex(/^[0-9a-fA-F]{24}$/)
-  .message('Must be a valid Mongo ObjectId');
-
-export const paginationSchema = Joi.object({
-  page: Joi.number().integer().min(1).default(1),
-  perPage: Joi.number().integer().min(1).max(100).default(20),
-  sort: Joi.string().optional(),
-});

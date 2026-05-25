@@ -20,7 +20,7 @@ export async function createPaymentIntent(args: {
   orderId: string;
   userId: string;
   req?: Request;
-}): Promise<{ clientSecret: string; paymentId: string; publishableKey?: string }> {
+}): Promise<{ clientSecret: string; paymentId: string }> {
   const order = await Order.findById(args.orderId);
   if (!order) throw AppError.notFound('Order not found', 'ORDER_NOT_FOUND');
   if (order.userId.toString() !== args.userId) {
@@ -62,7 +62,6 @@ export async function createPaymentIntent(args: {
     return {
       clientSecret: `dev_mock_secret_${payment.id}`,
       paymentId: payment.id,
-      publishableKey: undefined,
     };
   }
 

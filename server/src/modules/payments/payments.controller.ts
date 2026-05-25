@@ -12,7 +12,6 @@ export const createIntent = asyncHandler(async (req: Request, res: Response) => 
   });
   return ok(res, {
     ...result,
-    publishableKey: undefined, // frontend already loads its own publishable key
     stripeConfigured: !!config.stripe.secretKey && !config.stripe.secretKey.includes('replace_me'),
   });
 });

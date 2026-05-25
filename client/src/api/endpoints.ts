@@ -4,7 +4,6 @@ import type {
   AuditLogEntry,
   Cart,
   MenuItem,
-  NotificationItem,
   Order,
   OrderStatus,
   PageMeta,
@@ -148,14 +147,6 @@ export const reviewsApi = {
 
   listForRestaurant: (restaurantId: string, page = 1) =>
     api.get<ApiResponse<Review[]>>(`/reviews/restaurant/${restaurantId}`, { params: { page } }),
-};
-
-// ----- Notifications ---------------------------------------------------
-
-export const notificationsApi = {
-  list: (limit = 20) => api.get<ApiResponse<NotificationItem[]>>('/notifications', { params: { limit } }),
-  markRead: (id: string) => api.patch<ApiResponse<NotificationItem>>(`/notifications/${id}/read`),
-  markAllRead: () => api.post<void>('/notifications/read-all'),
 };
 
 // ----- Admin -----------------------------------------------------------
