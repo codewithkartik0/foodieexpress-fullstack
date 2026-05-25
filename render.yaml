@@ -45,17 +45,13 @@ services:
       - key: CLIENT_ORIGIN
         sync: false            # set to your frontend URL after first deploy, e.g. https://foodieexpress-web.onrender.com
       - key: STRIPE_SECRET_KEY
-        sync: false            # leave blank for dev-mock checkout, or paste sk_test_/sk_live_
+        sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
       - key: STRIPE_CURRENCY
         value: inr
-      - key: BREVO_API_KEY
-        sync: false            # paste your Brevo API key (https://brevo.com) here in Render UI
-      - key: RESEND_API_KEY
-        sync: false            # optional fallback; only useful if you verify a domain on Resend
       - key: SMTP_HOST
-        sync: false            # legacy SMTP fallback; Render blocks outbound SMTP, prefer Brevo
+        value: smtp.gmail.com
       - key: SMTP_PORT
         value: "587"
       - key: SMTP_SECURE
@@ -65,7 +61,7 @@ services:
       - key: SMTP_PASS
         sync: false
       - key: EMAIL_FROM
-        sync: false            # must match the email you verified at your provider
+        sync: false
       - key: APP_URL
         sync: false            # set to your frontend URL after first deploy, used in password-reset emails
       - key: TAX_RATE
