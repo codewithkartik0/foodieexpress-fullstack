@@ -67,14 +67,6 @@ export const config = {
     from: optional('EMAIL_FROM', 'FoodieExpress <no-reply@foodieexpress.dev>'),
   },
 
-  resend: {
-    apiKey: optional('RESEND_API_KEY'),
-  },
-
-  brevo: {
-    apiKey: optional('BREVO_API_KEY'),
-  },
-
   appUrl: optional('APP_URL', 'http://localhost:5173'),
 
   pricing: {

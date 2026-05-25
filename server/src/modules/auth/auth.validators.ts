@@ -45,3 +45,27 @@ export const verifyEmailSchema = Joi.object({
 export const resendOtpSchema = Joi.object({
   email: Joi.string().email().lowercase().trim().required(),
 });
+
+export const updateProfileSchema = Joi.object({
+  fullName: Joi.string().min(2).max(80).trim().optional(),
+  phone: Joi.string()
+    .pattern(/^[0-9]{10}$/)
+    .allow('', null)
+    .optional(),
+  addresses: Joi.array()
+    .items(
+      Joi.object({
+        _id: Joi.string().optional(),
+        label: Joi.string().max(40).trim().optional(),
+        line1: Joi.string().max(200).trim().required(),
+        line2: Joi.string().max(200).trim().allow('').optional(),
+        city: Joi.string().max(80).trim().required(),
+        state: Joi.string().max(80).trim().required(),
+        postalCode: Joi.string().max(12).trim().required(),
+        country: Joi.string().max(60).trim().default('IN'),
+        isDefault: Joi.boolean().optional(),
+      }),
+    )
+    .max(5)
+    .optional(),
+});

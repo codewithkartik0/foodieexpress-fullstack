@@ -403,3 +403,32 @@ export async function getMe(userId: string): Promise<Record<string, unknown>> {
   if (!user) throw AppError.notFound('User not found', 'USER_NOT_FOUND');
   return user.toJSON();
 }
+
+export async function updateProfile(args: {
+  userId: string;
+  fullName?: string;
+  phone?: string;
+  addresses?: Array<{
+    _id?: string;
+    label?: string;
+    line1: string;
+    line2?: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    country?: string;
+    isDefault?: boolean;
+  }>;
+  req?: Request;
+}): Promise<Record<string, unknown>> {
+  const user = await User.findById(args.userId);
+  if (!user) throw AppError.notFound('User not found', 'USER_NOT_FOUND');
+
+  if (args.fullName !== undefined) user.fullName = args.fullName;
+  if (args.phone !== undefined) user.phone = args.phone || undefined;
+  if (args.addresses !== undefined) user.addresses = args.addresses as any;
+
+  await user.save();
+  await audit({ type: 'user.profile.update', userId: user.id, role: user.role, req: args.req });
+  return user.toJSON();
+}
